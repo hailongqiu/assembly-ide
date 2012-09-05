@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2012 Hailong Qiu, Inc.
+# Copyright (C) 2012 Deepin, Inc.
 #               2012 Hailong Qiu
 #
 # Author:     Hailong Qiu <356752238@qq.com>

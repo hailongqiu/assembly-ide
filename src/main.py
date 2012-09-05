@@ -26,9 +26,11 @@ from widget.constant import (APP_WIDTH, APP_HEIGHT)
 from widget.top_menu import TopMenu as Button
 from widget.toolbar import ToolBar
 from widget.dialog_window import show_open_file_dialog_window
+from widget.complie_show_list import ComplieShowList
 from codeedit.codeedit import CodeEdit
 from tool.tool import open_gcalctool, input_link, input_bin, input_elf, run_elf
 import gtk
+import os
 
 class AssemblyIDE(object):
     def __init__ (self):            
@@ -47,18 +49,20 @@ class AssemblyIDE(object):
         self.vbox_ali.set_padding(6, 2, 2, 2)
         self.vbox = gtk.VBox()
         self.vbox_ali.add(self.vbox)
-
+        
         self.init_root_menu()
         
         self.init_top_toolbar()
         
         self.code_edit = CodeEdit()
-        # test code edit.
-        self.code_edit_file = "/home/long/1.asm"
-        self.code_edit.read(self.code_edit_file)
+        self.code_edit_file = self.code_edit.file_path
+        
+        self.complie_show_list = ComplieShowList()
+        self.code_edit.connect("codeedit-changed-file-name", self.modify_code_edit_file_name)
         
         self.vbox.pack_start(self.top_toolbar_ali, False, False)
         self.vbox.pack_start(self.code_edit, True,True)
+        self.vbox.pack_start(self.complie_show_list, False, False)
         self.app.main_box.pack_start(self.vbox_ali, True, True)
         self.app.window.show_all()
         
@@ -159,13 +163,30 @@ class AssemblyIDE(object):
     def bin_btn_clicked(self, widget):
         pass
     
-    def link_btn_clicked(self, widget):        
-        print input_link(self.code_edit_file, "/home/long/1.o")
+    def link_btn_clicked(self, widget):
+        self.link_function()    
         
-    def run_btn_clicked(self, widget):    
-        run_bool = input_elf("/home/long/1.o", "/home/long/test.out")
-        if run_bool == "编译完成":
-            run_elf("/home/long/test.out")
+    def link_function(self):    
+        self.complie_show_list.clear_text()
+        self.code_edit.save()
+        temp_path = os.path.split(self.code_edit_file)
+        link_file_name = os.path.splitext(temp_path[1])[0] + ".o"
+        self.link_file_path = os.path.join(temp_path[0], link_file_name) 
+        self.complie_show_list.add_text(input_link(self.code_edit_file, self.link_file_path))
+        
+    def run_btn_clicked(self, widget):
+        self.link_function()
+        if os.path.exists(self.link_file_path):
+            temp_path = os.path.split(self.link_file_path)
+            run_file_name = os.path.splitext(temp_path[1])[0] + ".out"
+            self.run_file_path = os.path.join(temp_path[0], run_file_name) 
+            print "run_btn_clicked:", self.run_file_path
+            run_bool = input_elf(self.link_file_path, self.run_file_path)
+            if run_bool == "True":
+                self.complie_show_list.add_text("编译完成!!")
+                self.complie_show_list.add_text(run_elf(self.run_file_path))
+            else:    
+                print run_bool
         
     def gcalctool_btn_clicked(self, widget):
         open_gcalctool()
@@ -177,6 +198,9 @@ class AssemblyIDE(object):
             
     def notes_line(self):        
         self.code_edit.cursor_start_insert_ch()
+        
+    def modify_code_edit_file_name(self, CodeEdit, file_name):    
+        self.code_edit_file = file_name
         
 AssemblyIDE()
 gtk.main()

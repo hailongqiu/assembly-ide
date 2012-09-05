@@ -24,7 +24,7 @@ import subprocess
 import commands
 
 def run_elf(souce_file):
-    subprocess.Popen(souce_file)
+    return commands.getoutput(souce_file)
     
 def input_elf(souce_file, dec_file):
     '''
@@ -34,7 +34,7 @@ def input_elf(souce_file, dec_file):
     getoutput_str = commands.getoutput(
         "sh ./tool/compile.sh %s %s %s" % ("elf", souce_file, dec_file))
     if not getoutput_str:
-        getoutput_str = "编译完成"
+        getoutput_str = "True"
     return getoutput_str
 
 def input_link(souce_file, dec_file, OS_BIT_TYPE=32):

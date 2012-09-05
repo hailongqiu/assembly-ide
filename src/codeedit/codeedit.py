@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2012 Hailong, Inc.
+# Copyright (C) 2012 Deepin, Inc.
 #               2012 Hailong Qiu
 #
 # Author:     Hailong Qiu <356752238@qq.com>
@@ -26,6 +26,7 @@ import mmap
 import cairo
 import pango
 import pangocairo
+import gobject
 
 from codehintswindow import CodeHintsWindow
 from ini   import Config, get_home_path
@@ -40,8 +41,14 @@ SELECT_MOVE_COPY_STATE_LEFT  = 1
 SELECT_MOVE_COPY_STATE_RIGHT = 2
 
 class CodeEdit(gtk.ScrolledWindow):
+    __gsignals__ = {
+        "codeedit-changed-file-name" : (gobject.SIGNAL_RUN_LAST, gobject.TYPE_NONE,
+                            (gobject.TYPE_STRING,))
+        }    
     def __init__(self):
-        gtk.ScrolledWindow.__init__(self)                 
+        gtk.ScrolledWindow.__init__(self)                         
+        # init file path.
+        self.file_path = None
         self.init_code_edit_config() # init code edit config.
         self.init_language_config()  # init language config.        
         self.init_code_line_value()
@@ -194,16 +201,8 @@ class CodeEdit(gtk.ScrolledWindow):
         
         
     def init_select_value(self):
-        self.select_start_to_end_state = SELECT_MOVE_COPY_STATE_MID
-        self.select_copy_bool = False
-        self.select_copy_draw_bool = False
-        self.start_select_padding_x = 0
-        self.end_select_padding_x   = 0
-        self.start_select_row    = 0
-        self.end_select_row      = 0
-        self.start_select_column = 0
-        self.end_select_column   = 0        
-        
+        # Init select value.
+        self.clear_select_value()
         color = "#000000"
         alpha = 0.5
         config_color = self.code_edit_config.get("SELECT_VALUE", "select_start_to_end_color")
@@ -216,6 +215,17 @@ class CodeEdit(gtk.ScrolledWindow):
         self.select_start_to_end_color = color
         self.select_start_to_end_alpha = float(alpha)
 
+    def clear_select_value(self):    
+        self.select_start_to_end_state = SELECT_MOVE_COPY_STATE_MID
+        self.select_copy_bool = False
+        self.select_copy_draw_bool = False
+        self.start_select_padding_x = 0
+        self.end_select_padding_x   = 0
+        self.start_select_row    = 0
+        self.end_select_row      = 0
+        self.start_select_column = 0
+        self.end_select_column   = 0
+        
     def init_text_buffer_value(self):
         notes_symbol = ";"
         self.tab_num = 4    
@@ -966,6 +976,7 @@ class CodeEdit(gtk.ScrolledWindow):
     def read(self, file_path):
         if os.path.exists(file_path):
             self.read_file(file_path)
+            self.emit("codeedit-changed-file-name", self.file_path)
         else:
             self.perror_input("Read File Error!!......")
             self.text_buffer_list = [""]
@@ -1011,9 +1022,35 @@ class CodeEdit(gtk.ScrolledWindow):
         self.row_border_width += self.get_ch_size(str(self.current_row))[0]
         
     def save(self):
-        self.save_file(self.file_path)
+        try:    
+            self.save_file(self.file_path)
+        except Exception,e:
+            print '[codeedit save]Error:',e
+            self.file_path = self.open_save_file_dialog_window()
+            if self.file_path:
+                self.save_file(self.file_path)
+                
+        self.emit("codeedit-changed-file-name", self.file_path)    
         
-    def save_file(self, file_path):    
+    def open_save_file_dialog_window(self):        
+
+        open_dialog = gtk.FileChooserDialog(
+            "保存文件对话框",
+            None,
+            gtk.FILE_CHOOSER_ACTION_SAVE,
+            (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+             gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+    
+        open_dialog.set_current_folder(get_home_path())
+        res = open_dialog.run()
+        if res == gtk.RESPONSE_OK:
+            path_string = open_dialog.get_filename()
+            open_dialog.destroy()
+            return path_string
+        else:
+            open_dialog.destroy()
+    
+    def save_file(self, file_path):
         fp = open(file_path, "w")
         fp.write(self.buffer_to_text())
         fp.close()    
@@ -1029,7 +1066,9 @@ class CodeEdit(gtk.ScrolledWindow):
     '''Tool function.'''
     ###
     def buffer_to_text(self):
-        return '\n'.join(self.text_buffer_list)
+        temp_buffer = '\n'.join(self.text_buffer_list)
+        temp_buffer += "\n"
+        return temp_buffer
         
     def perror_input(self, text):
         print text
@@ -1082,7 +1121,7 @@ class CodeEdit(gtk.ScrolledWindow):
         return start_position_row, end_position_row, start_to_end_row
     
     # get_scrolled_window_width
-    def get_scrolled_window_width(self): # 123456
+    def get_scrolled_window_width(self): 
         '''Get column of scrolled window current width.'''
         # get start position column.
         start_position_column = int(self.get_hadjustment().get_value() / self.column_font_width)
