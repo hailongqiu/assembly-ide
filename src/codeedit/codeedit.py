@@ -434,8 +434,11 @@ class CodeEdit(gtk.ScrolledWindow):
     # draw_text_source_view_buffer_text.
     def draw_text_source_view_buffer_text(self, cr, rect):
         start_row, end_row, sum_row = self.get_scrolled_window_height()
-        for text in self.get_buffer_row_start_to_end_text(start_row, sum_row):
-            start_column, end_column, sum_column = self.get_scrolled_window_width(start_row)
+        start_column, end_column, sum_column = self.get_scrolled_window_width()
+        for text in self.get_buffer_row_start_to_end_text(start_row, sum_row):            
+            # print "start_column:", start_column
+            # print "end_column:", end_column
+            # print "sum_column:", sum_column
             # get token color.
             pango_list = pango.AttrList()
             if text:                
@@ -1079,17 +1082,14 @@ class CodeEdit(gtk.ScrolledWindow):
         return start_position_row, end_position_row, start_to_end_row
     
     # get_scrolled_window_width
-    def get_scrolled_window_width(self, row):
+    def get_scrolled_window_width(self): # 123456
         '''Get column of scrolled window current width.'''
         # get start position column.
-        start_position_column = self.get_scrolled_window_start_column(row)
-        # start_position_column = 0
+        start_position_column = int(self.get_hadjustment().get_value() / self.column_font_width)
         # get end position column.
-        end_position_column = self.get_scrolled_window_end_column(row, start_position_column)
+        end_position_column = int(self.allocation.width / self.column_font_width)
         # end_position_column = int((self.allocation.width ) / self.column_font_width)
         start_to_end_column = start_position_column + end_position_column
-        # print "start_position_column:", start_position_column
-        # print "end_position_column:",   end_position_column
         return start_position_column, end_position_column, start_to_end_column
     
     def get_scrolled_window_start_column(self, row):
